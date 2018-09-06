@@ -141,6 +141,10 @@ public class Main {
         return counter;
     }
 
+    static int countFreePositionsOnString(String matrix) {
+        return matrix.length() - matrix.replace("f", "").length();
+    }
+
     static int getThreatLevelReduce(Square[][] matrix, int size, int x, int y) {
         int initialX, finalX, tempY;
         int threatLevelReduce = 15; //at least it reduces 15 on horizontal and vertical
@@ -153,6 +157,25 @@ public class Main {
         finalX = (x + y) < size - 1 ? (x + y) : size - 1;
         threatLevelReduce += (finalX - initialX);
         return threatLevelReduce;
+    }
+
+    static int getTotalThreatLevel(String matrix) {
+        int totalThreatLevel = 0;
+        String[] pairs = matrix.split(" ");
+        for (int i = 0; i < pairs.length; i++) {
+            totalThreatLevel += Integer.parseInt(pairs[i].split(",")[1]);
+        }
+        return totalThreatLevel;
+    }
+
+    static int getTotalThreatLevel2(Square[][] matrix, int size) {
+        int totalThreatLevel = 0;
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                totalThreatLevel += matrix[i][j].getThreatLevel();
+            }
+        }
+        return totalThreatLevel;
     }
 
     static Pair<Integer, Integer> getBestPositionForAdding(Square[][] matrix, int size, List<String> olderStates) {
@@ -255,46 +278,71 @@ public class Main {
         }
     }
 
-    static String dfs(Square[][] matrix, int size, Map<String, String> graph, String parent) {
+    static String dfs(Square[][] matrix, int size, Map<String, String> graph, String parent, List<Integer> counter) {
         String solved = "";
         String origin = matrixToString(matrix, size);
         graph.put(origin, parent);
         List<String> adjacents = getAdjacents(origin, size);
         for (String adj: adjacents) {
             if (solved.length() == 0 && !graph.containsKey(adj)) {
+                counter.add(1);
                 graph.put(adj, origin);
                 if (checkNQueens(adj, size)) {
+                    System.out.println(counter.size());
                     solved = adj;
                 }
                 else
-                    solved = dfs(stringToMatrix(adj, size), size, graph, origin);
+                    solved = dfs(stringToMatrix(adj, size), size, graph, origin, counter);
             }
         }
         return solved;
     }
 
-    static String dfs2(Square[][] matrix, int size, Map<String, String> graph, String parent) {
+    static String dfsCountingFreePositions(Square[][] matrix, int size, Map<String, String> graph, String parent, List<Integer> counter) {
         String solved = "";
         String origin = matrixToString(matrix, size);
         graph.put(origin, parent);
         List<String> adjacents = getAdjacents(origin, size);
         adjacents.sort((a1, a2) -> {
-            return countFreePositions(stringToMatrix(a1, size), size) > countFreePositions(stringToMatrix(a2, size), size) ? -1 : 1;
+            return countFreePositionsOnString(a1) > countFreePositionsOnString(a2) ? -1 : 1;
         });
         for (String adj: adjacents) {
             if (solved.length() == 0 && !graph.containsKey(adj)) {
+                counter.add(1);
                 graph.put(adj, origin);
                 if (checkNQueens(adj, size)) {
                     solved = adj;
+                    System.out.println(counter.size());
                 }
                 else
-                    solved = dfs2(stringToMatrix(adj, size), size, graph, origin);
+                    solved = dfsCountingFreePositions(stringToMatrix(adj, size), size, graph, origin, counter);
             }
         }
         return solved;
     }
 
-
+    static String dfsCalculatingThreatLevel(Square[][] matrix, int size, Map<String, String> graph, String parent, List<Integer> counter) {
+        String solved = "";
+        String origin = matrixToString(matrix, size);
+        graph.put(origin, parent);
+        List<String> adjacents = getAdjacents(origin, size);
+        adjacents.sort((a1, a2) -> {
+            return getTotalThreatLevel2(stringToMatrix(a1, size), size) > getTotalThreatLevel2(stringToMatrix(a2, size), size) ? -1 : 1;
+        });
+        for (String adj: adjacents) {
+            if (solved.length() == 0 && !graph.containsKey(adj)) {
+                counter.add(1);
+                graph.put(adj, origin);
+                if (checkNQueens(adj, size)) {
+                    solved = adj;
+                    System.out.println(counter.size());
+                }
+                else
+                    solved = dfsCalculatingThreatLevel(stringToMatrix(adj, size), size, graph, origin, counter);
+            }
+        }
+        return solved;
+    }
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -302,7 +350,8 @@ public class Main {
         int size = scanner.nextInt();
         Square[][] matrix = initialize(size);
         Map<String, String> graph = new HashMap<String, String>();
-        String finalState = dfs2(matrix, size, graph, "");
+        List<Integer> counter = new ArrayList<>();
+        String finalState = dfs(matrix, size, graph, "", counter);
         System.out.println("Final state");
         printMatrix(stringToMatrix(finalState, size), size);
         //printPath(graph, finalState, size);
